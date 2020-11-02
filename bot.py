@@ -20,33 +20,36 @@ from bfxapi.tests.helpers import (create_stubbed_client, ws_publish_auth_accepte
 
 bfx = Client(
   API_KEY=os.environ['key'],
-  API_SECRET=os.environ['secret']
+  API_SECRET=os.environ['secret'],
+  logLevel='ERROR'
+
 )
-@bfx.ws.on('new_trade')
-def log_trade(trade):
-  print ("New trade: {}".format(trade))
-@bfx.ws.on('new_order')
-def log_trade(order):
-  print ("New order: {}".format(order))
-@bfx.ws.on('new_position')
-def log_trade(position):
-  print ("New position: {}".format(position))
-@bfx.ws.on('new_balance')
-def log_trade(balance):
-  print ("New balance: {}".format(balance))
+@bfx.ws.on('order_new')
+def log(order_new):
+  print ("New order_new: {}".format(order_new))
+@bfx.ws.on('order_closed')
+def log(order_closed):
+  print ("New order_closed: {}".format(order_closed))
+@bfx.ws.on('position_update')
+def log(position_update):
+  print ("New position_update: {}".format(position_update))
+@bfx.ws.on('balance_update')
+def log(balance_update):
+  print ("New balance_update: {}".format(balance_update))
+@bfx.ws.on('margin_info_update')
+def log(margin_info_update):
+  print ("New margin_info_update: {}".format(margin_info_update))
+@bfx.ws.on('wallet_update')
+def log(wallet_update):
+  print ("New wallet_update: {}".format(wallet_update))
 
-def o_new():
-    while True:
-        o_new = EventWatcher.watch(bfx.ws, 'all')  
-        new_res = o_new.wait_until_complete()
-        print(new_res)
-
+"""
 @bfx.ws.on('authenticated')
 async def start(data):
   t = threading.Thread(target=o_new, args=())
   t.daemon = True
   t.start()
-  
+"""
 #async def submit_order(auth_message):
   #await bfx.ws.submit_order('tBTCUSD', 19000, 0.01, Order.Type.EXCHANGE_MARKET)
 
@@ -108,11 +111,14 @@ class HoneyBot( object ):
         done = False
 
         while done == False:
+            """
             try:
                 await self.exchange.watch_ticker('BCH/USD')
                 done = True
             except:
                 sleep(1)
+            """
+            sleep(1)
         while True:
             try:
                 
@@ -208,8 +214,8 @@ class HoneyBot( object ):
         t.daemon = True
         t.start()
         loop = asyncio.new_event_loop()
-        self.exchange = ccxtpro.bitfinex({'enableRateLimit': True, 'asyncio_loop': loop, "apiKey": KEY,
-    "secret": SECRET})
+        #self.exchange = ccxtpro.bitfinex({'enableRateLimit': True, 'asyncio_loop': loop, "apiKey": KEY,
+    #"secret": SECRET})
         #ticker = self.exchange.fetchTicker('BCH/USD')
         
         loop.run_until_complete(self.balance(loop))
