@@ -505,41 +505,31 @@ class bitfinex(Exchange, ccxt.bitfinex):
         url = self.urls['api']['ws']['private']
         future = self.authenticate()
         return await self.after_dropped(future, self.watch, url, id, None, 1)
-    async def watch_my_trades(self, params={}):
+    async def watch_my_trades(self, symbol=None, since=None, limit=None, params={}):
         await self.load_markets()
         future = self.authenticate()
         url = self.urls['api']['ws']['private']
-        watching = self.after_dropped(future, self.watch, url, 'te', None, 1)
-        # purgeOrders here
-        return await self.after(watching, self.watch, url, None, None, None) 
-    async def watch_margin(self, params={}):
+        return await self.watch(url, 'te')
+    async def watch_margin(self, symbol=None, since=None, limit=None, params={}):
         await self.load_markets()
         future = self.authenticate()
         url = self.urls['api']['ws']['private']
-        watching = self.after_dropped(future, self.watch, url, 'miu', None, 1)
-        # purgeOrders here
-        return await self.after(watching, self.watch, url, None, None, None)     
-    async def watch_positions(self, params={}):
+        return await self.watch(url, 'miu')
+    async def watch_positions(self, symbol=None, since=None, limit=None, params={}):
         await self.load_markets()
         future = self.authenticate()
         url = self.urls['api']['ws']['private']
-        watching = self.after_dropped(future, self.watch, url, 'ps', None, 1)
-        # purgeOrders here
-        return await self.after(watching, self.watch, url, None, None, None) 
-    async def watch_balance(self, params={}):
+        return await self.watch(url, 'ps')
+    async def watch_balance(self, symbol=None, since=None, limit=None, params={}):
         await self.load_markets()
         future = self.authenticate()
         url = self.urls['api']['ws']['private']
-        watching = self.after_dropped(future, self.watch, url, 'ws', None, 1)
-        # purgeOrders here
-        return await self.after(watching, self.watch, url, None, None, None)   
+        return await self.watch(url, 'ws')
     async def watch_orders(self, symbol=None, since=None, limit=None, params={}):
         await self.load_markets()
         future = self.authenticate()
         url = self.urls['api']['ws']['private']
-        watching = self.after_dropped(future, self.watch, url, 'os', None, 1)
-        # purgeOrders here
-        return await self.after(watching, self.filter_by_symbol_since_limit, symbol, since, limit)
+        return await self.watch(url, 'os')
     def handle_balance(self, client, message, fourth):
         id = self.safe_string(message, 0)
         try:
@@ -586,8 +576,8 @@ class bitfinex(Exchange, ccxt.bitfinex):
             'bals': self.bals
         }
         
-        client.resolve(parsed, 'ws')
-        watching = self.after_dropped(future, self.watch, url, 'wu', None, 1)
+        client.resolve(parsed, 'wu')
+        #watching = self.after_dropped(future, self.watch, url, 'wu', None, 1)
         # purgeOrders here
         #return await self.after(watching, self.watch, url, None, None, None)  
     def handle_orders(self, client, message, wha):
@@ -639,14 +629,16 @@ class bitfinex(Exchange, ccxt.bitfinex):
         #
         data = self.safe_value(message, 2, [])
         messageType = self.safe_string(message, 1)
+        print(messageType)
         if messageType == 'os':
             for i in range(0, len(data)):
                 value = data[i]
                 self.handle_order(client, value)
         else:
             self.handle_order(client, data)
-        if self.orders is not None:
-            client.resolve(self.orders, 'os')
+        #if self.orders is not None:
+        print('resolve')
+        client.resolve(self.orders, 'os')
     def handle_positions(self, client, message, wha):
         #print(wha)
         #
@@ -697,14 +689,18 @@ class bitfinex(Exchange, ccxt.bitfinex):
         data = self.safe_value(message, 2, [])
         messageType = self.safe_string(message, 1)
         if messageType == 'ps':
+            #print(len(data))
             for i in range(0, len(data)):
                 value = data[i]
                 self.handle_position(client, value)
         else:
             self.handle_position(client, data)
-        if self.positions is not None:
-            client.resolve(self.positions, 'ps')
-        
+        try:
+            if len(self.positions) > 0:
+                client.resolve(self.positions, 'ps')
+        except:
+            abc=123
+        return self.positions
     def parse_ws_order_status(self, status):
         statuses = {
             'ACTIVE': 'open',
@@ -735,11 +731,9 @@ class bitfinex(Exchange, ccxt.bitfinex):
             #remaining = abs(remaining)
             side = 'sell'
         type = self.safe_string(position, 15)
-        if type.find('LIMIT') > -1:
-            type = 'limit'
-        elif type.find('MARKET') > -1:
-            type = 'market'
-        status = self.self.safe_string(position, 1)
+        if type is not None:
+            type = type.lower()
+        status = self.safe_string(position, 1)
         price = self.safe_float(position, 3)
         rawDatetime = self.safe_string(position, 12)
         timestamp = self.parse8601(rawDatetime)
@@ -755,11 +749,15 @@ class bitfinex(Exchange, ccxt.bitfinex):
             'amount': amount,
             'status': status
         }
-        if self.positions is None:
-            limit = 1000
-            self.positions = ArrayCacheBySymbolById(limit)
+        try:
+            if self.positions is None:
+                limit = 1000
+                self.positions = {}
+        except:
+            self.positions = {}
         positions = self.positions
-        positions.append(parsed)
+        positions[symbol] = (parsed)
+        self.positions = positions
         client.resolve(parsed, id)
         return parsed
         
@@ -839,6 +837,7 @@ class bitfinex(Exchange, ccxt.bitfinex):
                 return message  # skip heartbeats within subscription channels for now
             subscription = self.safe_value(client.subscriptions, channelId, {})
             channel = self.safe_string(subscription, 'channel')
+            print(channel)
             name = self.safe_string(message, 1)
             methods = {
                 'book': self.handle_order_book,

@@ -11,6 +11,47 @@ from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
 from cryptofeed.defines import BID, ASK, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES
 from cryptofeed.exchanges import Bitfinex
 fh = FeedHandler()
+import os
+import sys
+import threading
+from bfxapi import Client, Order
+from bfxapi.tests.helpers import (create_stubbed_client, ws_publish_auth_accepted, ws_publish_connection_init,
+                      EventWatcher)
+
+bfx = Client(
+  API_KEY=os.environ['key'],
+  API_SECRET=os.environ['secret']
+)
+@bfx.ws.on('new_trade')
+def log_trade(trade):
+  print ("New trade: {}".format(trade))
+@bfx.ws.on('new_order')
+def log_trade(order):
+  print ("New order: {}".format(order))
+@bfx.ws.on('new_position')
+def log_trade(position):
+  print ("New position: {}".format(position))
+@bfx.ws.on('new_balance')
+def log_trade(balance):
+  print ("New balance: {}".format(balance))
+
+def o_new():
+    while True:
+        o_new = EventWatcher.watch(bfx.ws, 'all')  
+        new_res = o_new.wait_until_complete()
+        print(new_res)
+
+@bfx.ws.on('authenticated')
+async def start(data):
+  t = threading.Thread(target=o_new, args=())
+  t.daemon = True
+  t.start()
+  
+#async def submit_order(auth_message):
+  #await bfx.ws.submit_order('tBTCUSD', 19000, 0.01, Order.Type.EXCHANGE_MARKET)
+
+
+
 
 honeybot = None
 
@@ -64,16 +105,19 @@ class HoneyBot( object ):
     
 
     async def balance(self, loop):
-        
+        done = False
 
-
-        
-        
+        while done == False:
+            try:
+                await self.exchange.watch_ticker('BCH/USD')
+                done = True
+            except:
+                sleep(1)
         while True:
             try:
                 
                 
-                balance = await self.exchange.watch_balance({})
+                balance = await self.exchange.watch_balance()
                 bals = (self.exchange.bals)
                 done = 0
                 #print(bals)
@@ -94,39 +138,35 @@ class HoneyBot( object ):
                     
 
             except Exception as e:
-                if "object has no attribute 'values'" not in str(e):
+                if "object has no attribute" not in str(e):
                     await PrintException()
                     sleep(5)
                 else:
                     #await PrintException()
                     sleep(1)
+            
             print('orders')
-            try:
-                orders = await self.exchange.watch_orders({})
-                print(self.exchange.orders) 
-            except:
-                await PrintException()
-            print('positions')
-            try:
-                positions = await self.exchange.watch_positions({})
-                print(self.exchange.positions)
-  
-            except:
-                await PrintException()
+            #try:
+            orders = await self.exchange.watch_orders()
+            print(self.exchange.orders) 
+            #except:
+                #await PrintException()
+            
             print('margin')
-            try:
-                margin = await self.exchange.watch_margin({})
-                print(self.exchange.margin)
- 
-            except:
-                await PrintException()
-            print('my_trades')
-            try:
-                my_trades = await self.exchange.watch_my_trades({})
-                print(self.exchange.my_trades)
+        
+            margin = await self.exchange.watch_margin()
+            print(self.exchange.margin)
 
-            except:
-                await PrintException()
+            print('positions')
+            positions = await self.exchange.watch_positions()
+            print(len(self.exchange.positions))
+
+
+            print('my_trades')
+            my_trades = await self.exchange.watch_my_trades()
+            print(self.exchange.my_trades)
+
+
         await exchange.close()    
     def cancelall( self ):
         abc=123
@@ -164,7 +204,7 @@ class HoneyBot( object ):
         print(self.ids)
         config = {TICKER: self.ids}
         fh.add_feed(Bitfinex(config=config, callbacks={TICKER: TickerCallback(ticker)}))
-        t = threading.Thread(target=self.fhrun, args=())
+        t = threading.Thread(target=self.bfxrun, args=())
         t.daemon = True
         t.start()
         loop = asyncio.new_event_loop()
@@ -173,10 +213,10 @@ class HoneyBot( object ):
         #ticker = self.exchange.fetchTicker('BCH/USD')
         
         loop.run_until_complete(self.balance(loop))
-    def fhrun( self ):
-        while True:
-            fh.run()
-            sleep(2)
+    def bfxrun( self ):
+    
+        bfx.ws.run()
+            #sleep(2)
     def run( self ):
         self.runfirst()
     def restart( self, msg=None ):

@@ -184,7 +184,7 @@ class Exchange(BaseExchange):
         except Exception as e:
             self.reloading_markets = False
             self.markets_loading = None
-            raise e
+            #raise e
         self.reloading_markets = False
         return result
 
