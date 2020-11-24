@@ -114,6 +114,7 @@ class bytetrade(Exchange):
                 },
             },
             'commonCurrencies': {
+                '1': 'ByteTrade',
                 '44': 'ByteHub',
                 '48': 'Blocktonic',
                 '133': 'TerraCredit',
@@ -204,10 +205,7 @@ class bytetrade(Exchange):
                 'code': code,
                 'name': name,
                 'active': active,
-                'precision': {
-                    'amount': amountPrecision,
-                    'price': None,
-                },
+                'precision': amountPrecision,
                 'fee': None,
                 'limits': {
                     'amount': {'min': None, 'max': None},
@@ -550,6 +548,7 @@ class bytetrade(Exchange):
             'lastTradeTimestamp': lastTradeTimestamp,
             'symbol': symbol,
             'type': type,
+            'timeInForce': None,
             'side': side,
             'price': price,
             'amount': amount,
@@ -583,11 +582,11 @@ class bytetrade(Exchange):
         baseId = market['baseId']
         baseCurrency = self.currency(market['base'])
         amountTruncated = self.amount_to_precision(symbol, amount)
-        amountChain = self.to_wei(amountTruncated, baseCurrency['precision']['amount'])
+        amountChain = self.to_wei(amountTruncated, baseCurrency['precision'])
         quoteId = market['quoteId']
         quoteCurrency = self.currency(market['quote'])
         priceRounded = self.price_to_precision(symbol, price)
-        priceChain = self.to_wei(priceRounded, quoteCurrency['precision']['amount'])
+        priceChain = self.to_wei(priceRounded, quoteCurrency['precision'])
         now = self.milliseconds()
         expiration = self.milliseconds()
         datetime = self.iso8601(now)
@@ -597,6 +596,8 @@ class bytetrade(Exchange):
         defaultDappId = 'Sagittarius'
         dappId = self.safe_string(params, 'dappId', defaultDappId)
         defaultFee = self.safe_string(self.options, 'fee', '300000000000000')
+        totalFeeRate = self.safe_string(params, 'totalFeeRate', 8)
+        chainFeeRate = self.safe_string(params, 'chainFeeRate', 1)
         fee = self.safe_string(params, 'fee', defaultFee)
         eightBytes = self.integer_pow('2', '64')
         allByteStringArray = [
@@ -621,7 +622,10 @@ class bytetrade(Exchange):
             self.number_to_le(0, 2),
             self.number_to_le(int(math.floor(now / 1000)), 4),
             self.number_to_le(int(math.floor(expiration / 1000)), 4),
-            self.number_to_le(0, 2),
+            self.number_to_le(1, 1),
+            self.number_to_le(int(chainFeeRate), 2),
+            self.number_to_le(1, 1),
+            self.number_to_le(int(totalFeeRate), 2),
             self.number_to_le(int(quoteId), 4),
             self.number_to_le(int(baseId), 4),
             self.number_to_le(0, 1),
@@ -651,7 +655,10 @@ class bytetrade(Exchange):
             self.number_to_le(0, 2),
             self.number_to_le(int(math.floor(now / 1000)), 4),
             self.number_to_le(int(math.floor(expiration / 1000)), 4),
-            self.number_to_le(0, 2),
+            self.number_to_le(1, 1),
+            self.number_to_le(int(chainFeeRate), 2),
+            self.number_to_le(1, 1),
+            self.number_to_le(int(totalFeeRate), 2),
             self.number_to_le(int(quoteId), 4),
             self.number_to_le(int(baseId), 4),
             self.number_to_le(0, 1),
@@ -689,6 +696,8 @@ class bytetrade(Exchange):
             'use_btt_as_fee': False,
             'money_id': int(quoteId),
             'stock_id': int(baseId),
+            'custom_no_btt_fee_rate': int(totalFeeRate),
+            'custom_btt_fee_rate': int(chainFeeRate),
         }
         fatty = {
             'timestamp': datetime,
@@ -900,7 +909,7 @@ class bytetrade(Exchange):
         self.load_markets()
         currency = self.currency(code)
         amountTruncate = self.decimal_to_precision(amount, TRUNCATE, currency['info']['basePrecision'] - currency['info']['transferPrecision'], DECIMAL_PLACES, NO_PADDING)
-        amountChain = self.to_wei(amountTruncate, currency['precision']['amount'])
+        amountChain = self.to_wei(amountTruncate, currency['precision'])
         assetType = int(currency['id'])
         now = self.milliseconds()
         expiration = now

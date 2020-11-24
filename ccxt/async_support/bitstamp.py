@@ -129,6 +129,12 @@ class bitstamp(Exchange):
                         'xlm_address/',
                         'pax_withdrawal/',
                         'pax_address/',
+                        'link_withdrawal/',
+                        'link_address/',
+                        'usdc_withdrawal/',
+                        'usdc_address/',
+                        'omg_withdrawal/',
+                        'omg_address/',
                         'transfer-to-main/',
                         'transfer-from-main/',
                         'withdrawal-requests/',
@@ -1171,6 +1177,7 @@ class bitstamp(Exchange):
             'status': status,
             'symbol': symbol,
             'type': None,
+            'timeInForce': None,
             'side': side,
             'price': price,
             'cost': cost,
@@ -1333,7 +1340,7 @@ class bitstamp(Exchange):
         if v1:
             response = json.loads(response)
         address = response if v1 else self.safe_string(response, 'address')
-        tag = None if v1 else self.safe_string(response, 'destination_tag')
+        tag = None if v1 else self.safe_string_2(response, 'memo_id', 'destination_tag')
         self.check_address(address)
         return {
             'currency': code,

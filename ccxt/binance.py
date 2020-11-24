@@ -193,6 +193,12 @@ class binance(Exchange):
                         'mining/payment/list',
                         'mining/statistics/user/status',
                         'mining/statistics/user/list',
+                        # liquid swap endpoints
+                        'bswap/pools',
+                        'bswap/liquidity',
+                        'bswap/liquidityOps',
+                        'bswap/quote',
+                        'bswap/swap',
                     ],
                     'post': [
                         'asset/dust',
@@ -223,6 +229,10 @@ class binance(Exchange):
                         'lending/customizedFixed/purchase',
                         'lending/daily/purchase',
                         'lending/daily/redeem',
+                        # liquid swap endpoints
+                        'bswap/liquidityAdd',
+                        'bswap/liquidityRemove',
+                        'bswap/swap',
                     ],
                     'put': [
                         'userDataStream',
@@ -711,7 +721,7 @@ class binance(Exchange):
             future = False
             delivery = False
             if 'maintMarginPercent' in market:
-                delivery = ('marginAsset' in market)
+                delivery = ('deliveryDate' in market)
                 future = not delivery
                 marketType = 'delivery' if delivery else 'future'
             spot = not (future or delivery)
@@ -1098,6 +1108,9 @@ class binance(Exchange):
         elif market['delivery']:
             method = 'dapiPublicGetTicker24hr'
         response = getattr(self, method)(self.extend(request, params))
+        if isinstance(response, list):
+            firstTicker = self.safe_value(response, 0, {})
+            return self.parse_ticker(firstTicker, market)
         return self.parse_ticker(response, market)
 
     def parse_tickers(self, rawTickers, symbols=None):
@@ -1496,6 +1509,7 @@ class binance(Exchange):
             if self.options['parseOrderToPrecision']:
                 cost = float(self.cost_to_precision(symbol, cost))
         clientOrderId = self.safe_string(order, 'clientOrderId')
+        timeInForce = self.safe_string(order, 'timeInForce')
         return {
             'info': order,
             'id': id,
@@ -1505,6 +1519,7 @@ class binance(Exchange):
             'lastTradeTimestamp': None,
             'symbol': symbol,
             'type': type,
+            'timeInForce': timeInForce,
             'side': side,
             'price': price,
             'amount': amount,
@@ -1818,6 +1833,56 @@ class binance(Exchange):
             return self.parse_orders(response, market)
         else:
             return response
+
+    def fetch_positions(self, symbols=None, since=None, limit=None, params={}):
+        self.load_markets()
+        response = self.fetch_balance(params)
+        info = self.safe_value(response, 'info', {})
+        #
+        # futures, delivery
+        #
+        #     {
+        #         "feeTier":0,
+        #         "canTrade":true,
+        #         "canDeposit":true,
+        #         "canWithdraw":true,
+        #         "updateTime":0,
+        #         "assets":[
+        #             {
+        #                 "asset":"ETH",
+        #                 "walletBalance":"0.09886711",
+        #                 "unrealizedProfit":"0.00000000",
+        #                 "marginBalance":"0.09886711",
+        #                 "maintMargin":"0.00000000",
+        #                 "initialMargin":"0.00000000",
+        #                 "positionInitialMargin":"0.00000000",
+        #                 "openOrderInitialMargin":"0.00000000",
+        #                 "maxWithdrawAmount":"0.09886711",
+        #                 "crossWalletBalance":"0.09886711",
+        #                 "crossUnPnl":"0.00000000",
+        #                 "availableBalance":"0.09886711"
+        #             }
+        #         ],
+        #         "positions":[
+        #             {
+        #                 "symbol":"BTCUSD_201225",
+        #                 "initialMargin":"0",
+        #                 "maintMargin":"0",
+        #                 "unrealizedProfit":"0.00000000",
+        #                 "positionInitialMargin":"0",
+        #                 "openOrderInitialMargin":"0",
+        #                 "leverage":"20",
+        #                 "isolated":false,
+        #                 "positionSide":"BOTH",
+        #                 "entryPrice":"0.00000000",
+        #                 "maxQty":"250",  # "maxNotional" on futures
+        #             },
+        #         ]
+        #     }
+        #
+        positions = self.safe_value_2(info, 'positions', 'userAssets', [])
+        # todo unify parsePosition/parsePositions
+        return positions
 
     def fetch_my_trades(self, symbol=None, since=None, limit=None, params={}):
         if symbol is None:

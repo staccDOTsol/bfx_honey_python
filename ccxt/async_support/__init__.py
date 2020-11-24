@@ -4,7 +4,7 @@
 
 # -----------------------------------------------------------------------------
 
-__version__ = '1.36.29'
+__version__ = '1.38.13'
 
 # -----------------------------------------------------------------------------
 
@@ -57,11 +57,11 @@ from ccxt.async_support.bequant import bequant                            # noqa
 from ccxt.async_support.bibox import bibox                                # noqa: F401
 from ccxt.async_support.bigone import bigone                              # noqa: F401
 from ccxt.async_support.binance import binance                            # noqa: F401
-from ccxt.async_support.binanceje import binanceje                        # noqa: F401
 from ccxt.async_support.binanceus import binanceus                        # noqa: F401
 from ccxt.async_support.bit2c import bit2c                                # noqa: F401
 from ccxt.async_support.bitbank import bitbank                            # noqa: F401
 from ccxt.async_support.bitbay import bitbay                              # noqa: F401
+from ccxt.async_support.bitcoincom import bitcoincom                      # noqa: F401
 from ccxt.async_support.bitfinex import bitfinex                          # noqa: F401
 from ccxt.async_support.bitfinex2 import bitfinex2                        # noqa: F401
 from ccxt.async_support.bitflyer import bitflyer                          # noqa: F401
@@ -106,7 +106,6 @@ from ccxt.async_support.coinmarketcap import coinmarketcap                # noqa
 from ccxt.async_support.coinmate import coinmate                          # noqa: F401
 from ccxt.async_support.coinone import coinone                            # noqa: F401
 from ccxt.async_support.coinspot import coinspot                          # noqa: F401
-from ccxt.async_support.coss import coss                                  # noqa: F401
 from ccxt.async_support.crex24 import crex24                              # noqa: F401
 from ccxt.async_support.currencycom import currencycom                    # noqa: F401
 from ccxt.async_support.deribit import deribit                            # noqa: F401
@@ -130,7 +129,6 @@ from ccxt.async_support.huobipro import huobipro                          # noqa
 from ccxt.async_support.huobiru import huobiru                            # noqa: F401
 from ccxt.async_support.ice3x import ice3x                                # noqa: F401
 from ccxt.async_support.idex import idex                                  # noqa: F401
-from ccxt.async_support.idex2 import idex2                                # noqa: F401
 from ccxt.async_support.independentreserve import independentreserve      # noqa: F401
 from ccxt.async_support.indodax import indodax                            # noqa: F401
 from ccxt.async_support.itbit import itbit                                # noqa: F401
@@ -159,7 +157,6 @@ from ccxt.async_support.rightbtc import rightbtc                          # noqa
 from ccxt.async_support.ripio import ripio                                # noqa: F401
 from ccxt.async_support.southxchange import southxchange                  # noqa: F401
 from ccxt.async_support.stex import stex                                  # noqa: F401
-from ccxt.async_support.stronghold import stronghold                      # noqa: F401
 from ccxt.async_support.surbitcoin import surbitcoin                      # noqa: F401
 from ccxt.async_support.therock import therock                            # noqa: F401
 from ccxt.async_support.tidebit import tidebit                            # noqa: F401
@@ -184,11 +181,11 @@ exchanges = [
     'bibox',
     'bigone',
     'binance',
-    'binanceje',
     'binanceus',
     'bit2c',
     'bitbank',
     'bitbay',
+    'bitcoincom',
     'bitfinex',
     'bitfinex2',
     'bitflyer',
@@ -233,7 +230,6 @@ exchanges = [
     'coinmate',
     'coinone',
     'coinspot',
-    'coss',
     'crex24',
     'currencycom',
     'deribit',
@@ -257,7 +253,6 @@ exchanges = [
     'huobiru',
     'ice3x',
     'idex',
-    'idex2',
     'independentreserve',
     'indodax',
     'itbit',
@@ -286,7 +281,6 @@ exchanges = [
     'ripio',
     'southxchange',
     'stex',
-    'stronghold',
     'surbitcoin',
     'therock',
     'tidebit',

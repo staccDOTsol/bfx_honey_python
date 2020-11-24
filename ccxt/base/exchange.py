@@ -4,7 +4,7 @@
 
 # -----------------------------------------------------------------------------
 
-__version__ = '1.36.29'
+__version__ = '1.38.13'
 
 # -----------------------------------------------------------------------------
 
@@ -19,7 +19,8 @@ from ccxt.base.errors import InvalidAddress
 from ccxt.base.errors import ArgumentsRequired
 from ccxt.base.errors import BadSymbol
 from ccxt.base.errors import RateLimitExceeded
-
+from time import sleep
+import random
 # -----------------------------------------------------------------------------
 
 from ccxt.base.decimal_to_precision import decimal_to_precision
@@ -83,6 +84,7 @@ from time import mktime
 from wsgiref.handlers import format_date_time
 
 # -----------------------------------------------------------------------------
+import sys, linecache
 
 try:
     basestring  # basestring was removed in Python 3
@@ -109,6 +111,7 @@ try:
 except ImportError:
     Web3 = HTTPProvider = None  # web3/0x not supported in Python 2
 # -----------------------------------------------------------------------------
+from pypac import PACSession, get_pac
 
 
 class Exchange(object):
@@ -331,7 +334,10 @@ class Exchange(object):
     }
 
     def __init__(self, config={}):
-
+        self.session = None
+        self.acount = 0
+        pac = get_pac(url='http://localhost/proxies.PAC')
+        self.session2 = PACSession(pac=pac)  # Session () by default
         self.precision = dict() if self.precision is None else self.precision
         self.limits = dict() if self.limits is None else self.limits
         self.exceptions = dict() if self.exceptions is None else self.exceptions
@@ -393,9 +399,23 @@ class Exchange(object):
         self.session = self.session if self.session or self.asyncio_loop else Session()
         self.logger = self.logger if self.logger else logging.getLogger(__name__)
 
-        if self.requiresWeb3 and Web3 and not cls.web3:
-            cls.web3 = Web3(HTTPProvider())
-
+        if self.requiresWeb3 and Web3 and not Exchange.web3:
+            Exchange.web3 = Web3(HTTPProvider())
+    def PrintException( self ):
+        #if apiKey == firstkey:
+        exc_type, exc_obj, tb = sys.exc_info()
+        f = tb.tb_frame
+        lineno = tb.tb_lineno
+        filename = f.f_code.co_filename
+        linecache.checkcache(filename)
+        line = linecache.getline(filename, lineno, f.f_globals)
+        string = 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
+        
+        if 'connect timeout' not in string and '429' not in string and 'Read timed out' not in string and 'requires string as left operand, not int' not in string and  'ERR_RATE_LIMIT' not in string:
+            print(string)
+            self.acount = 100
+        elif 'ERR_RATE_LIMIT' in string:
+            self.acount = 100
     def __del__(self):
         if self.session:
             self.session.close()
@@ -559,6 +579,23 @@ class Exchange(object):
         http_status_text = None
         json_response = None
         try:
+            if self.proxies == None or self.acount >= 45:
+                pac = get_pac(url='http://localhost/proxies.PAC')
+                self.session2 = PACSession(pac=pac)
+                self.proxies = self.session2._proxy_resolver.get_proxy_for_requests(url)
+                #print(self.proxies)
+                try:
+                    for key in self.proxies:
+            
+                        self.session2._proxy_resolver.ban_proxy(self.proxies[key])
+                except:
+                    PrintException()
+                print(self.proxies)
+                self.session.verify= False        # Do not reject on SSL certificate checks
+                self.session.trust_env=False   
+                self.acount = 0
+                sleep(0.1)
+            self.acount = self.acount + 1
             response = self.session.request(
                 method,
                 url,
@@ -588,50 +625,59 @@ class Exchange(object):
             response.raise_for_status()
 
         except Timeout as e:
-            raise RequestTimeout(method + ' ' + url)
+            self.PrintException()
+            details = ' '.join([self.id, method, url])
+            raise RequestTimeout(details) from e
 
         except TooManyRedirects as e:
-            raise ExchangeError(method + ' ' + url)
+            self.PrintException()
+            details = ' '.join([self.id, method, url])
+            raise ExchangeError(details) from e
 
         except SSLError as e:
-            raise ExchangeError(method + ' ' + url)
+            self.PrintException()
+            details = ' '.join([self.id, method, url])
+            raise ExchangeError(details) from e
 
         except HTTPError as e:
+            self.PrintException()
+            details = ' '.join([self.id, method, url])
             self.handle_errors(http_status_code, http_status_text, url, method, headers, http_response, json_response, request_headers, request_body)
-            self.handle_rest_errors(http_status_code, http_status_text, http_response, url, method)
-            raise ExchangeError(method + ' ' + url)
+            self.handle_http_status_code(http_status_code, http_status_text, url, method, http_response)
+            raise ExchangeError(details) from e
 
         except requestsConnectionError as e:
+            self.PrintException()
             error_string = str(e)
+            details = ' '.join([self.id, method, url])
             if 'Read timed out' in error_string:
-                raise RequestTimeout(method + ' ' + url + ' ' + error_string)
+                raise RequestTimeout(details) from e
             else:
-                raise NetworkError(method + ' ' + url + ' ' + error_string)
+                raise NetworkError(details) from e
 
         except RequestException as e:  # base exception class
+            self.PrintException()
             error_string = str(e)
+            details = ' '.join([self.id, method, url])
             if any(x in error_string for x in ['ECONNRESET', 'Connection aborted.', 'Connection broken:']):
-                raise NetworkError(method + ' ' + url + ' ' + error_string)
+                raise NetworkError(details) from e
             else:
-                raise ExchangeError(method + ' ' + url + ' ' + error_string)
-
+                raise ExchangeError(details) from e
+        except Exception as e:
+            self.PrintException()
         self.handle_errors(http_status_code, http_status_text, url, method, headers, http_response, json_response, request_headers, request_body)
         if json_response is not None:
             return json_response
-        if self.is_text_response(headers):
+        elif self.is_text_response(headers):
             return http_response
-        return response.content
+        else:
+            return response.content
 
-    def handle_rest_errors(self, http_status_code, http_status_text, body, url, method):
-        error = None
+    def handle_http_status_code(self, http_status_code, http_status_text, url, method, body):
         string_code = str(http_status_code)
         if string_code in self.httpExceptions:
-            error = self.httpExceptions[string_code]
-            if error == ExchangeNotAvailable:
-                if re.search('(cloudflare|incapsula|overload|ddos)', body, flags=re.IGNORECASE):
-                    error = DDoSProtection
-        if error:
-            raise error(' '.join([method, url, string_code, http_status_text, body]))
+            Exception = self.httpExceptions[string_code]
+            raise Exception(' '.join([self.id, method, url, string_code, http_status_text, body]))
 
     def parse_json(self, http_response):
         try:
@@ -641,6 +687,7 @@ class Exchange(object):
             pass
 
     def is_text_response(self, headers):
+        # https://github.com/ccxt/ccxt/issues/5302
         content_type = headers.get('Content-Type', '')
         return content_type.startswith('application/json') or content_type.startswith('text/')
 
@@ -1723,6 +1770,8 @@ class Exchange(object):
                     'symbol': symbol,
                     'base': base,
                     'quote': quote,
+                    'baseId': baseId,
+                    'quoteId': quoteId,
                 }
         if market is not None:
             return market
@@ -1730,6 +1779,8 @@ class Exchange(object):
             'symbol': marketId,
             'base': None,
             'quote': None,
+            'baseId': None,
+            'quoteId': None,
         }
 
     def safe_symbol(self, marketId, market=None, delimiter=None):
@@ -1806,8 +1857,6 @@ class Exchange(object):
     def market(self, symbol):
         if not self.markets:
             raise ExchangeError('Markets not loaded')
-        
-            
         if isinstance(symbol, basestring) and (symbol in self.markets):
             return self.markets[symbol]
         raise BadSymbol('{} does not have market symbol {}'.format(self.id, symbol))

@@ -143,6 +143,9 @@ class crex24(Exchange):
                 'BULL': 'BuySell',
                 'CREDIT': 'TerraCredit',
                 'GHOST': 'GHOSTPRISM',
+                'IQ': 'IQ.Cash',
+                'PUT': 'PutinCoin',
+                'UNI': 'Universe',
                 'YOYO': 'YOYOW',
             },
             # exchange-specific options
@@ -675,6 +678,7 @@ class crex24(Exchange):
                 average = cost / filled
             if self.options['parseOrderToPrecision']:
                 cost = float(self.cost_to_precision(symbol, cost))
+        timeInForce = self.safe_string(order, 'timeInForce')
         return {
             'info': order,
             'id': id,
@@ -684,6 +688,7 @@ class crex24(Exchange):
             'lastTradeTimestamp': lastTradeTimestamp,
             'symbol': symbol,
             'type': type,
+            'timeInForce': timeInForce,
             'side': side,
             'price': price,
             'amount': amount,

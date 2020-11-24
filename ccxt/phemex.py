@@ -1469,6 +1469,15 @@ class phemex(Exchange):
         }
         return self.safe_string(types, type, type)
 
+    def parse_time_in_force(self, timeInForce):
+        timeInForces = {
+            'GoodTillCancel': 'GTC',
+            'PostOnly': 'PO',
+            'ImmediateOrCancel': 'IOC',
+            'FillOrKill': 'FOK',
+        }
+        return self.safe_string(timeInForces, timeInForce, timeInForce)
+
     def parse_spot_order(self, order, market=None):
         #
         # spot
@@ -1554,6 +1563,7 @@ class phemex(Exchange):
         if filled is None:
             if (amount is not None) and (remaining is not None):
                 filled = min(0, amount - remaining)
+        timeInForce = self.parse_time_in_force(self.safeStirng(order, 'timeInForce'))
         return {
             'info': order,
             'id': id,
@@ -1563,6 +1573,7 @@ class phemex(Exchange):
             'lastTradeTimestamp': None,
             'symbol': symbol,
             'type': type,
+            'timeInForce': timeInForce,
             'side': side,
             'price': price,
             'amount': amount,
@@ -1629,6 +1640,7 @@ class phemex(Exchange):
         lastTradeTimestamp = self.safe_integer_product(order, 'transactTimeNs', 0.000001)
         if lastTradeTimestamp == 0:
             lastTradeTimestamp = None
+        timeInForce = self.parse_time_in_force(self.safe_string(order, 'timeInForce'))
         return {
             'info': order,
             'id': id,
@@ -1638,6 +1650,7 @@ class phemex(Exchange):
             'lastTradeTimestamp': lastTradeTimestamp,
             'symbol': symbol,
             'type': type,
+            'timeInForce': timeInForce,
             'side': side,
             'price': price,
             'amount': amount,
@@ -2204,6 +2217,100 @@ class phemex(Exchange):
             'updated': None,
             'fee': fee,
         }
+
+    def fetch_positions(self, symbols=None, since=None, limit=None, params={}):
+        self.load_markets()
+        code = self.safe_string(params, 'code')
+        request = {}
+        if code is None:
+            currencyId = self.safe_string(params, 'currency')
+            if currencyId is None:
+                raise ArgumentsRequired(self.id + ' fetchPositions() requires a currency parameter or a code parameter')
+        else:
+            currency = self.currency(code)
+            params = self.omit(params, 'code')
+            request['currency'] = currency['id']
+        response = self.privateGetAccountsAccountPositions(self.extend(request, params))
+        #
+        #     {
+        #         "code":0,"msg":"",
+        #         "data":{
+        #             "account":{
+        #                 "accountId":6192120001,
+        #                 "currency":"BTC",
+        #                 "accountBalanceEv":1254744,
+        #                 "totalUsedBalanceEv":0,
+        #                 "bonusBalanceEv":1254744
+        #             },
+        #             "positions":[
+        #                 {
+        #                     "accountID":6192120001,
+        #                     "symbol":"BTCUSD",
+        #                     "currency":"BTC",
+        #                     "side":"None",
+        #                     "positionStatus":"Normal",
+        #                     "crossMargin":false,
+        #                     "leverageEr":100000000,
+        #                     "leverage":1.00000000,
+        #                     "initMarginReqEr":100000000,
+        #                     "initMarginReq":1.00000000,
+        #                     "maintMarginReqEr":500000,
+        #                     "maintMarginReq":0.00500000,
+        #                     "riskLimitEv":10000000000,
+        #                     "riskLimit":100.00000000,
+        #                     "size":0,
+        #                     "value":0E-8,
+        #                     "valueEv":0,
+        #                     "avgEntryPriceEp":0,
+        #                     "avgEntryPrice":0E-8,
+        #                     "posCostEv":0,
+        #                     "posCost":0E-8,
+        #                     "assignedPosBalanceEv":0,
+        #                     "assignedPosBalance":0E-8,
+        #                     "bankruptCommEv":0,
+        #                     "bankruptComm":0E-8,
+        #                     "bankruptPriceEp":0,
+        #                     "bankruptPrice":0E-8,
+        #                     "positionMarginEv":0,
+        #                     "positionMargin":0E-8,
+        #                     "liquidationPriceEp":0,
+        #                     "liquidationPrice":0E-8,
+        #                     "deleveragePercentileEr":0,
+        #                     "deleveragePercentile":0E-8,
+        #                     "buyValueToCostEr":100225000,
+        #                     "buyValueToCost":1.00225000,
+        #                     "sellValueToCostEr":100075000,
+        #                     "sellValueToCost":1.00075000,
+        #                     "markPriceEp":135736070,
+        #                     "markPrice":13573.60700000,
+        #                     "markValueEv":0,
+        #                     "markValue":null,
+        #                     "unRealisedPosLossEv":0,
+        #                     "unRealisedPosLoss":null,
+        #                     "estimatedOrdLossEv":0,
+        #                     "estimatedOrdLoss":0E-8,
+        #                     "usedBalanceEv":0,
+        #                     "usedBalance":0E-8,
+        #                     "takeProfitEp":0,
+        #                     "takeProfit":null,
+        #                     "stopLossEp":0,
+        #                     "stopLoss":null,
+        #                     "cumClosedPnlEv":0,
+        #                     "cumFundingFeeEv":0,
+        #                     "cumTransactFeeEv":0,
+        #                     "realisedPnlEv":0,
+        #                     "realisedPnl":null,
+        #                     "cumRealisedPnlEv":0,
+        #                     "cumRealisedPnl":null
+        #                 }
+        #             ]
+        #         }
+        #     }
+        #
+        data = self.safe_value(response, 'data', {})
+        positions = self.safe_value(data, 'positions', [])
+        # todo unify parsePosition/parsePositions
+        return positions
 
     def sign(self, path, api='public', method='GET', params={}, headers=None, body=None):
         query = self.omit(params, self.extract_params(path))

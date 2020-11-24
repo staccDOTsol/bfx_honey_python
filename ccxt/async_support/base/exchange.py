@@ -2,7 +2,7 @@
 
 # -----------------------------------------------------------------------------
 
-__version__ = '1.36.29'
+__version__ = '1.38.13'
 
 # -----------------------------------------------------------------------------
 
@@ -146,7 +146,7 @@ class Exchange(BaseExchange):
             raise ExchangeError(method + ' ' + url)
 
         self.handle_errors(http_status_code, http_status_text, url, method, headers, http_response, json_response, request_headers, request_body)
-        self.handle_rest_errors(http_status_code, http_status_text, http_response, url, method)
+        self.handle_http_status_code(http_status_code, http_status_text, url, method, http_response)
         if json_response is not None:
             return json_response
         if self.is_text_response(headers):
@@ -163,8 +163,6 @@ class Exchange(BaseExchange):
         if self.has['fetchCurrencies']:
             currencies = await self.fetch_currencies()
         markets = await self.fetch_markets(params)
-        self.currencies = currencies
-        self.markets = markets
         return self.set_markets(markets, currencies)
 
     async def load_markets(self, reload=False, params={}):
@@ -174,17 +172,11 @@ class Exchange(BaseExchange):
             # coroutines can only be awaited once so we wrap it in a task
             self.markets_loading = asyncio.ensure_future(coroutine)
         try:
-            try:
-                if len(self.markets) > 0:
-                    result = self.markets
-                else:
-                    result = await self.markets_loading
-            except:
-                result = await self.markets_loading
+            result = await self.markets_loading
         except Exception as e:
             self.reloading_markets = False
             self.markets_loading = None
-            #raise e
+            raise e
         self.reloading_markets = False
         return result
 

@@ -247,6 +247,8 @@ class btcmarkets(Exchange):
         currencyId = self.safe_string(transaction, 'assetName')
         code = self.safe_currency_code(currencyId)
         amount = self.safe_float(transaction, 'amount')
+        if fee:
+            amount -= fee
         return {
             'id': self.safe_string(transaction, 'id'),
             'txid': txid,
@@ -469,9 +471,7 @@ class btcmarkets(Exchange):
         last = self.safe_float(ticker, 'lastPrice')
         baseVolume = self.safe_float(ticker, 'volume24h')
         quoteVolume = self.safe_float(ticker, 'volumeQte24h')
-        vwap = None
-        if (baseVolume is not None) and (quoteVolume is not None):
-            vwap = quoteVolume / baseVolume
+        vwap = self.vwap(baseVolume, quoteVolume)
         change = self.safe_float(ticker, 'price24h')
         percentage = self.safe_float(ticker, 'pricePct24h')
         return {
@@ -810,6 +810,7 @@ class btcmarkets(Exchange):
                 cost = price * filled
         id = self.safe_string(order, 'orderId')
         clientOrderId = self.safe_string(order, 'clientOrderId')
+        timeInForce = self.safe_string(order, 'timeInForce')
         return {
             'info': order,
             'id': id,
@@ -819,6 +820,7 @@ class btcmarkets(Exchange):
             'lastTradeTimestamp': None,
             'symbol': symbol,
             'type': type,
+            'timeInForce': timeInForce,
             'side': side,
             'price': price,
             'cost': cost,

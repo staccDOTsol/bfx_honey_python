@@ -1033,9 +1033,9 @@ class kraken(Exchange):
         fee = None
         cost = self.safe_float(order, 'cost')
         price = self.safe_float(description, 'price', price)
-        if (price is None) or (price == 0):
+        if (price is None) or (price == 0.0):
             price = self.safe_float(description, 'price2')
-        if (price is None) or (price == 0):
+        if (price is None) or (price == 0.0):
             price = self.safe_float(order, 'price', price)
         average = self.safe_float(order, 'price')
         if market is not None:
@@ -1071,6 +1071,7 @@ class kraken(Exchange):
             'status': status,
             'symbol': symbol,
             'type': type,
+            'timeInForce': None,
             'side': side,
             'price': price,
             'cost': cost,

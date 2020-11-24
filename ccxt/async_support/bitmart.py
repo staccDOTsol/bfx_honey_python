@@ -452,7 +452,7 @@ class bitmart(Exchange):
             #
             pricePrecision = self.safe_integer(market, 'price_max_precision')
             precision = {
-                'amount': self.safe_float(market, 'quote_increment'),
+                'amount': self.safe_float(market, 'base_min_size'),
                 'price': float(self.decimal_to_precision(math.pow(10, -pricePrecision), ROUND, 10)),
             }
             minBuyCost = self.safe_float(market, 'min_buy_amount')
@@ -692,9 +692,7 @@ class bitmart(Exchange):
             percentage *= 100
         baseVolume = self.safe_float_2(ticker, 'base_volume_24h', 'base_coin_volume')
         quoteVolume = self.safe_float_2(ticker, 'quote_volume_24h', 'quote_coin_volume')
-        vwap = None
-        if (quoteVolume is not None) and (baseVolume is not None) and (baseVolume != 0):
-            vwap = quoteVolume / baseVolume
+        vwap = self.vwap(baseVolume, quoteVolume)
         open = self.safe_float_2(ticker, 'open_24h', 'open')
         average = None
         if (last is not None) and (open is not None):
@@ -1511,18 +1509,8 @@ class bitmart(Exchange):
         id = self.safe_string(order, 'order_id', id)
         timestamp = self.parse8601(self.safe_string(order, 'created_at'))
         timestamp = self.safe_integer(order, 'create_time', timestamp)
-        symbol = None
         marketId = self.safe_string_2(order, 'symbol', 'contract_id')
-        if marketId is not None:
-            if marketId in self.markets_by_id:
-                market = self.markets_by_id[marketId]
-            else:
-                baseId, quoteId = marketId.split('_')
-                base = self.safe_currency_code(baseId)
-                quote = self.safe_currency_code(quoteId)
-                symbol = base + '/' + quote
-        if (symbol is None) and (market is not None):
-            symbol = market['symbol']
+        symbol = self.safe_symbol(marketId, market, '_')
         status = None
         if market is not None:
             status = self.parse_order_status_by_type(market['type'], self.safe_string(order, 'status'))
@@ -1568,6 +1556,7 @@ class bitmart(Exchange):
             'lastTradeTimestamp': None,
             'symbol': symbol,
             'type': type,
+            'timeInForce': None,
             'side': side,
             'price': price,
             'amount': amount,

@@ -22,7 +22,7 @@
 
 # ----------------------------------------------------------------------------
 
-__version__ = '1.36.29'
+__version__ = '1.38.13'
 
 # ----------------------------------------------------------------------------
 
@@ -75,11 +75,11 @@ from ccxt.bequant import bequant                            # noqa: F401
 from ccxt.bibox import bibox                                # noqa: F401
 from ccxt.bigone import bigone                              # noqa: F401
 from ccxt.binance import binance                            # noqa: F401
-from ccxt.binanceje import binanceje                        # noqa: F401
 from ccxt.binanceus import binanceus                        # noqa: F401
 from ccxt.bit2c import bit2c                                # noqa: F401
 from ccxt.bitbank import bitbank                            # noqa: F401
 from ccxt.bitbay import bitbay                              # noqa: F401
+from ccxt.bitcoincom import bitcoincom                      # noqa: F401
 from ccxt.bitfinex import bitfinex                          # noqa: F401
 from ccxt.bitfinex2 import bitfinex2                        # noqa: F401
 from ccxt.bitflyer import bitflyer                          # noqa: F401
@@ -124,7 +124,6 @@ from ccxt.coinmarketcap import coinmarketcap                # noqa: F401
 from ccxt.coinmate import coinmate                          # noqa: F401
 from ccxt.coinone import coinone                            # noqa: F401
 from ccxt.coinspot import coinspot                          # noqa: F401
-from ccxt.coss import coss                                  # noqa: F401
 from ccxt.crex24 import crex24                              # noqa: F401
 from ccxt.currencycom import currencycom                    # noqa: F401
 from ccxt.deribit import deribit                            # noqa: F401
@@ -148,7 +147,6 @@ from ccxt.huobipro import huobipro                          # noqa: F401
 from ccxt.huobiru import huobiru                            # noqa: F401
 from ccxt.ice3x import ice3x                                # noqa: F401
 from ccxt.idex import idex                                  # noqa: F401
-from ccxt.idex2 import idex2                                # noqa: F401
 from ccxt.independentreserve import independentreserve      # noqa: F401
 from ccxt.indodax import indodax                            # noqa: F401
 from ccxt.itbit import itbit                                # noqa: F401
@@ -177,7 +175,6 @@ from ccxt.rightbtc import rightbtc                          # noqa: F401
 from ccxt.ripio import ripio                                # noqa: F401
 from ccxt.southxchange import southxchange                  # noqa: F401
 from ccxt.stex import stex                                  # noqa: F401
-from ccxt.stronghold import stronghold                      # noqa: F401
 from ccxt.surbitcoin import surbitcoin                      # noqa: F401
 from ccxt.therock import therock                            # noqa: F401
 from ccxt.tidebit import tidebit                            # noqa: F401
@@ -202,11 +199,11 @@ exchanges = [
     'bibox',
     'bigone',
     'binance',
-    'binanceje',
     'binanceus',
     'bit2c',
     'bitbank',
     'bitbay',
+    'bitcoincom',
     'bitfinex',
     'bitfinex2',
     'bitflyer',
@@ -251,7 +248,6 @@ exchanges = [
     'coinmate',
     'coinone',
     'coinspot',
-    'coss',
     'crex24',
     'currencycom',
     'deribit',
@@ -275,7 +271,6 @@ exchanges = [
     'huobiru',
     'ice3x',
     'idex',
-    'idex2',
     'independentreserve',
     'indodax',
     'itbit',
@@ -304,7 +299,6 @@ exchanges = [
     'ripio',
     'southxchange',
     'stex',
-    'stronghold',
     'surbitcoin',
     'therock',
     'tidebit',
